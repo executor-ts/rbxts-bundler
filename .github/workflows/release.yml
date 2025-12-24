@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build-and-release:
-    name: build-${{ matrix.target }}
+    name: Build ${{ matrix.artifact_name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -19,25 +19,32 @@ jobs:
           # Linux x86_64
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            archive_name: rbxts-bundler-linux-x86_64.zip
+            artifact_name: rbxts-bundler-linux-x86_64
             bin_name: rbxts-bundler
+
+          # Linux aarch64 (cross-compile)
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            artifact_name: rbxts-bundler-linux-aarch64
+            bin_name: rbxts-bundler
+            linker: gcc-aarch64-linux-gnu
 
           # Windows x86_64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            archive_name: rbxts-bundler-windows-x86_64.zip
+            artifact_name: rbxts-bundler-windows-x86_64
             bin_name: rbxts-bundler.exe
 
-          # macOS Intel (x86_64) - Uses macos-13 (Intel runner)
-          - os: macos-13
+          # macOS Intel (x86_64)
+          - os: macos-15-intel
             target: x86_64-apple-darwin
-            archive_name: rbxts-bundler-macos-x86_64.zip
+            artifact_name: rbxts-bundler-macos-x86_64
             bin_name: rbxts-bundler
 
-          # macOS ARM (Apple Silicon) - Uses macos-14 (ARM runner)
-          - os: macos-14
+          # macOS ARM (Apple Silicon)
+          - os: macos-latest
             target: aarch64-apple-darwin
-            archive_name: rbxts-bundler-macos-aarch64.zip
+            artifact_name: rbxts-bundler-macos-aarch64
             bin_name: rbxts-bundler
 
     steps:
@@ -48,28 +55,42 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Install cross-linker (Linux aarch64)
+        if: matrix.linker != ''
+        run: |
+          sudo apt update
+          sudo apt install -y ${{ matrix.linker }}
+          mkdir -p .cargo
+          echo '[target.aarch64-unknown-linux-gnu]' >> .cargo/config.toml
+          echo 'linker = "aarch64-linux-gnu-gcc"' >> .cargo/config.toml
+
       - name: Build Binary
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Strip Binary (Unix)
-        if: matrix.os != 'windows-latest'
-        run: strip target/${{ matrix.target }}/release/${{ matrix.bin_name }}
+        if: runner.os != 'Windows'
+        run: |
+          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
+            aarch64-linux-gnu-strip target/${{ matrix.target }}/release/${{ matrix.bin_name }}
+          else
+            strip target/${{ matrix.target }}/release/${{ matrix.bin_name }}
+          fi
 
       - name: Archive Binary (Unix)
-        if: matrix.os != 'windows-latest'
+        if: runner.os != 'Windows'
         run: |
           cd target/${{ matrix.target }}/release
-          zip ../../../${{ matrix.archive_name }} ${{ matrix.bin_name }}
+          zip ../../../${{ matrix.artifact_name }}.zip ${{ matrix.bin_name }}
 
       - name: Archive Binary (Windows)
-        if: matrix.os == 'windows-latest'
+        if: runner.os == 'Windows'
         run: |
           cd target/${{ matrix.target }}/release
-          Compress-Archive -Path ${{ matrix.bin_name }} -DestinationPath ..\..\..\${{ matrix.archive_name }}
+          Compress-Archive -Path ${{ matrix.bin_name }} -DestinationPath ..\..\..\${{ matrix.artifact_name }}.zip
 
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.archive_name }}
+          files: ${{ matrix.artifact_name }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
