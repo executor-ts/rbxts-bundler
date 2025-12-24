@@ -1,0 +1,31 @@
+[package]
+name = "rbxts-bundler"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "rbxts_bundler"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rbxts-bundler"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.100"
+clap = { version = "4.5.53", features = ["derive"] }
+colored = "3.0.0"
+darklua = "0.17.3"
+indicatif = "0.18.3"
+rbx_binary = "2.0.1"
+rbx_dom_weak = "4.1.0"
+serde = "1.0.228"
+serde_json = "1.0.146"
+
+[dev-dependencies]
+serde_json = "1.0.146"
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
