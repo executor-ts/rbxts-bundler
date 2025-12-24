@@ -40,7 +40,7 @@ fn test_mode_debug() {
     let mode = Mode::Development;
     let debug_str = format!("{:?}", mode);
     assert_eq!(debug_str, "Development");
-    
+
     let mode = Mode::Production;
     let debug_str = format!("{:?}", mode);
     assert_eq!(debug_str, "Production");

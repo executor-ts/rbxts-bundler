@@ -1209,7 +1209,6 @@ dependencies = [
  "indicatif",
  "rbx_binary",
  "rbx_dom_weak",
- "serde",
  "serde_json",
 ]
 

@@ -59,13 +59,19 @@ jobs:
         if: matrix.linker != ''
         run: |
           sudo apt update
-          sudo apt install -y ${{ matrix.linker }}
+          sudo apt install -y ${{ matrix.linker }} g++-aarch64-linux-gnu
           mkdir -p .cargo
           echo '[target.aarch64-unknown-linux-gnu]' >> .cargo/config.toml
           echo 'linker = "aarch64-linux-gnu-gcc"' >> .cargo/config.toml
+        env:
+          CC_aarch64_unknown_linux_gnu: aarch64-linux-gnu-gcc
+          CXX_aarch64_unknown_linux_gnu: aarch64-linux-gnu-g++
 
       - name: Build Binary
         run: cargo build --release --target ${{ matrix.target }}
+        env:
+          CC_aarch64_unknown_linux_gnu: aarch64-linux-gnu-gcc
+          CXX_aarch64_unknown_linux_gnu: aarch64-linux-gnu-g++
 
       - name: Strip Binary (Unix)
         if: runner.os != 'Windows'

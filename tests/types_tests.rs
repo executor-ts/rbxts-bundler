@@ -1,8 +1,8 @@
 //! Tests for the BundlerContext type.
 
-use std::path::Path;
 use rbxts_bundler::bundler::types::BundlerContext;
 use rbxts_bundler::cli::Mode;
+use std::path::Path;
 
 #[test]
 fn test_context_new_development() {
@@ -55,7 +55,7 @@ fn test_apply_templates_all_placeholders() {
     let ctx = BundlerContext::new(Mode::Production, path);
     let template = "-- {{NAME}} v{{VERSION}}\n-- Source: {{INPUT}}";
     let result = ctx.apply_templates(template);
-    
+
     assert!(!result.contains("{{NAME}}"));
     assert!(!result.contains("{{VERSION}}"));
     assert!(!result.contains("{{INPUT}}"));
@@ -78,7 +78,7 @@ fn test_apply_templates_repeated_placeholders() {
     let ctx = BundlerContext::new(Mode::Development, path);
     let template = "{{NAME}} - {{NAME}} - {{NAME}}";
     let result = ctx.apply_templates(template);
-    
+
     // All occurrences should be replaced
     assert!(!result.contains("{{NAME}}"));
     assert_eq!(result.matches("rbxts-bundler").count(), 3);

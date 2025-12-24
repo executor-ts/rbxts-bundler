@@ -16,7 +16,11 @@ const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    let mode = if args.release { Mode::Production } else { Mode::Development };
+    let mode = if args.release {
+        Mode::Production
+    } else {
+        Mode::Development
+    };
     let total_steps = if mode == Mode::Production { 5 } else { 4 };
     let logger = Logger::new(total_steps, args.silent);
 
@@ -60,7 +64,9 @@ fn main() -> Result<()> {
         logger.step("Minifying output...");
 
         let config_str = match &args.darklua_config {
-            Some(path) => Cow::Owned(fs::read_to_string(path).context("Failed to read darklua config")?),
+            Some(path) => {
+                Cow::Owned(fs::read_to_string(path).context("Failed to read darklua config")?)
+            }
             None => Cow::Borrowed(templates::DARKLUA_CONFIG),
         };
 

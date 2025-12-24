@@ -12,10 +12,10 @@ end
 
 return hello
 "#;
-    
+
     let result = minify(source, DARKLUA_CONFIG);
     assert!(result.is_ok());
-    
+
     let minified = result.unwrap();
     // Minified code should be shorter or equal in length (no unnecessary whitespace)
     assert!(!minified.is_empty());
@@ -27,10 +27,10 @@ fn test_minify_preserves_functionality() {
 local y = 2
 local z = x + y
 return z"#;
-    
+
     let result = minify(source, DARKLUA_CONFIG);
     assert!(result.is_ok());
-    
+
     let minified = result.unwrap();
     // Should still have return statement
     assert!(minified.contains("return"));
@@ -46,7 +46,7 @@ local function test()
 end
 return test
 "#;
-    
+
     let result = minify(source, DARKLUA_CONFIG);
     assert!(result.is_ok());
 }
@@ -55,7 +55,7 @@ return test
 fn test_minify_invalid_config() {
     let source = "local x = 1";
     let invalid_config = "{ invalid json }";
-    
+
     let result = minify(source, invalid_config);
     assert!(result.is_err());
 }
@@ -69,7 +69,7 @@ multiline string
 ]]
 return str
 "#;
-    
+
     let result = minify(source, DARKLUA_CONFIG);
     assert!(result.is_ok());
 }
@@ -81,7 +81,7 @@ local function empty()
 end
 return empty
 "#;
-    
+
     let result = minify(source, DARKLUA_CONFIG);
     assert!(result.is_ok());
 }
@@ -98,7 +98,7 @@ local t = {
 }
 return t
 "#;
-    
+
     let result = minify(source, DARKLUA_CONFIG);
     assert!(result.is_ok());
 }
