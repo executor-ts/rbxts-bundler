@@ -1,12 +1,36 @@
-//! Command-line argument parsing and build mode definitions.
+//! Command-line interface definitions.
 
 use std::fmt;
 use std::path::PathBuf;
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
-#[command(author, version, about)]
+#[command(
+    author,
+    version,
+    about,
+    disable_help_subcommand = true,
+    subcommand_required = false,
+    arg_required_else_help = true
+)]
+pub struct Cli {
+    /// Bundle the input model into a single Luau file
+    #[command(flatten)]
+    pub bundle: Args,
+
+    /// Available subcommands
+    #[command(subcommand)]
+    pub command: Option<Commands>,
+}
+
+#[derive(Subcommand, Debug, Clone)]
+pub enum Commands {
+    /// Bundle the input model into a single Luau file
+    Bundle(Args),
+}
+
+#[derive(clap::Args, Debug, Clone)]
 pub struct Args {
     /// Path to the input model file (.rbxm)
     #[arg(short = 'i', long)]
@@ -23,10 +47,6 @@ pub struct Args {
     /// Path to a custom header file
     #[arg(long)]
     pub header: Option<PathBuf>,
-
-    /// Path to a custom darklua configuration file
-    #[arg(long)]
-    pub darklua_config: Option<PathBuf>,
 
     /// Suppress standard output
     #[arg(short = 's', long, default_value_t = false)]

@@ -1,7 +1,7 @@
 //! Tests for the minification functionality.
 
 use rbxts_bundler::bundler::minify::minify;
-use rbxts_bundler::templates::DARKLUA_CONFIG;
+use rbxts_bundler::assets::DARKLUA_CONFIG;
 
 #[test]
 fn test_minify_simple() {

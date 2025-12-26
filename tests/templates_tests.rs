@@ -1,6 +1,6 @@
 //! Tests for template constants.
 
-use rbxts_bundler::templates::{DARKLUA_CONFIG, FILE_HEADER, RUNTIME_HEADER, TREE_HEADER};
+use rbxts_bundler::assets::{DARKLUA_CONFIG, FILE_HEADER, RUNTIME_HEADER, TREE_HEADER};
 
 #[test]
 fn test_file_header_contains_placeholders() {
