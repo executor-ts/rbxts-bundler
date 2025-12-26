@@ -1,6 +1,9 @@
 //! Tests for template constants.
 
-use rbxts_bundler::assets::{DARKLUA_CONFIG, FILE_HEADER, RUNTIME_HEADER, TREE_HEADER};
+use rbxts_bundler::assets::{
+    DARKLUA_DEV, DARKLUA_DEV_COMPAT, DARKLUA_PROD, DARKLUA_PROD_COMPAT, FILE_HEADER,
+    RUNTIME_HEADER, TREE_HEADER,
+};
 
 #[test]
 fn test_file_header_contains_placeholders() {
@@ -44,16 +47,44 @@ fn test_tree_header_is_comment() {
 }
 
 #[test]
-fn test_darklua_config_is_valid_json() {
-    let result: Result<serde_json::Value, _> = serde_json::from_str(DARKLUA_CONFIG);
-    assert!(result.is_ok(), "DARKLUA_CONFIG should be valid JSON");
+fn test_darklua_dev_is_valid_json() {
+    let result: Result<serde_json::Value, _> = serde_json::from_str(DARKLUA_DEV);
+    assert!(result.is_ok(), "DARKLUA_DEV should be valid JSON");
 }
 
 #[test]
-fn test_darklua_config_has_rules() {
-    let config: serde_json::Value = serde_json::from_str(DARKLUA_CONFIG).unwrap();
+fn test_darklua_dev_compat_is_valid_json() {
+    let result: Result<serde_json::Value, _> = serde_json::from_str(DARKLUA_DEV_COMPAT);
+    assert!(result.is_ok(), "DARKLUA_DEV_COMPAT should be valid JSON");
+}
 
-    // darklua config typically has a "rules" array or similar structure
-    // Just verify it's a valid object
-    assert!(config.is_object(), "DARKLUA_CONFIG should be a JSON object");
+#[test]
+fn test_darklua_prod_is_valid_json() {
+    let result: Result<serde_json::Value, _> = serde_json::from_str(DARKLUA_PROD);
+    assert!(result.is_ok(), "DARKLUA_PROD should be valid JSON");
+}
+
+#[test]
+fn test_darklua_prod_compat_is_valid_json() {
+    let result: Result<serde_json::Value, _> = serde_json::from_str(DARKLUA_PROD_COMPAT);
+    assert!(result.is_ok(), "DARKLUA_PROD_COMPAT should be valid JSON");
+}
+
+#[test]
+fn test_darklua_configs_have_rules() {
+    for (name, config_str) in [
+        ("DARKLUA_DEV", DARKLUA_DEV),
+        ("DARKLUA_DEV_COMPAT", DARKLUA_DEV_COMPAT),
+        ("DARKLUA_PROD", DARKLUA_PROD),
+        ("DARKLUA_PROD_COMPAT", DARKLUA_PROD_COMPAT),
+    ] {
+        let config: serde_json::Value = serde_json::from_str(config_str)
+            .unwrap_or_else(|_| panic!("{} should be valid JSON", name));
+        assert!(config.is_object(), "{} should be a JSON object", name);
+        assert!(
+            config.get("rules").is_some(),
+            "{} should have a rules field",
+            name
+        );
+    }
 }

@@ -1,0 +1,7 @@
+{
+    "rules": [
+        "remove_types",
+        "remove_comments",
+        "convert_index_to_field"
+    ]
+}

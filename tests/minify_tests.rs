@@ -1,7 +1,7 @@
 //! Tests for the minification functionality.
 
 use rbxts_bundler::bundler::minify::minify;
-use rbxts_bundler::assets::DARKLUA_CONFIG;
+use rbxts_bundler::assets::DARKLUA_PROD;
 
 #[test]
 fn test_minify_simple() {
@@ -13,7 +13,7 @@ end
 return hello
 "#;
 
-    let result = minify(source, DARKLUA_CONFIG);
+    let result = minify(source, DARKLUA_PROD);
     assert!(result.is_ok());
 
     let minified = result.unwrap();
@@ -28,7 +28,7 @@ local y = 2
 local z = x + y
 return z"#;
 
-    let result = minify(source, DARKLUA_CONFIG);
+    let result = minify(source, DARKLUA_PROD);
     assert!(result.is_ok());
 
     let minified = result.unwrap();
@@ -47,7 +47,7 @@ end
 return test
 "#;
 
-    let result = minify(source, DARKLUA_CONFIG);
+    let result = minify(source, DARKLUA_PROD);
     assert!(result.is_ok());
 }
 
@@ -70,7 +70,7 @@ multiline string
 return str
 "#;
 
-    let result = minify(source, DARKLUA_CONFIG);
+    let result = minify(source, DARKLUA_PROD);
     assert!(result.is_ok());
 }
 
@@ -82,7 +82,7 @@ end
 return empty
 "#;
 
-    let result = minify(source, DARKLUA_CONFIG);
+    let result = minify(source, DARKLUA_PROD);
     assert!(result.is_ok());
 }
 
@@ -99,6 +99,6 @@ local t = {
 return t
 "#;
 
-    let result = minify(source, DARKLUA_CONFIG);
+    let result = minify(source, DARKLUA_PROD);
     assert!(result.is_ok());
 }

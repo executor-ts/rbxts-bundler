@@ -15,4 +15,12 @@ pub const TREE_HEADER: &str = r#"-- Instance Tree Manifest
 // -- Embedded Assets --
 
 pub const RUNTIME_BODY: &str = include_str!("runtime.lua");
-pub const DARKLUA_CONFIG: &str = include_str!("darklua.json");
+
+// -- Darklua Configurations --
+
+pub const DARKLUA_DEV: &str = include_str!("darklua/dev.json");
+pub const DARKLUA_DEV_COMPAT: &str = include_str!("darklua/dev-compat.json");
+pub const DARKLUA_PROD: &str = include_str!("darklua/prod.json");
+pub const DARKLUA_PROD_COMPAT: &str = include_str!("darklua/prod-compat.json");
+
+

@@ -44,6 +44,10 @@ pub struct Args {
     #[arg(short = 'r', long, default_value_t = false)]
     pub release: bool,
 
+    /// Enable compatibility mode (remove modern Luau features)
+    #[arg(short = 'c', long, default_value_t = false)]
+    pub compat: bool,
+
     /// Path to a custom header file
     #[arg(long)]
     pub header: Option<PathBuf>,

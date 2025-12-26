@@ -1,0 +1,15 @@
+{
+    "rules": [
+        "remove_types",
+        "remove_comments",
+
+        "remove_compound_assignment",
+        "remove_floor_division",
+        "remove_if_expression",
+        "remove_interpolated_string",
+        "remove_continue",
+        "convert_luau_number",
+        
+        "convert_index_to_field"
+    ]
+}

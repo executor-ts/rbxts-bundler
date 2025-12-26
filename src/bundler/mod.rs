@@ -30,8 +30,7 @@ pub fn bundle(args: Args) -> Result<()> {
     } else {
         Mode::Development
     };
-    let total_steps = if mode == Mode::Production { 5 } else { 4 };
-    let logger = Logger::new(total_steps, args.silent);
+    let logger = Logger::new(5, args.silent);
 
     if !args.silent {
         eprintln!("{} v{} [{}]", PKG_NAME.cyan().bold(), PKG_VERSION, mode);
@@ -63,11 +62,34 @@ pub fn bundle(args: Args) -> Result<()> {
     let bundler = Bundler::new(&dom, mode, &args.input);
 
     logger.step("Assembling source code...");
-    let mut source = bundler.build(header_content)?;
+    
+    let (source, apply_final_darklua) = if mode == Mode::Production {
+        // Production: no per-script darklua, only final minification
+        let source = bundler.build(header_content, None)?;
+        (source, true)
+    } else {
+        // Development: apply darklua to each script before stringification
+        let dev_config = if args.compat {
+            assets::DARKLUA_DEV_COMPAT
+        } else {
+            assets::DARKLUA_DEV
+        };
+        let source = bundler.build(header_content, Some(dev_config))?;
+        (source, false)
+    };
 
-    if mode == Mode::Production {
+    let mut final_source = source;
+    
+    if apply_final_darklua {
         logger.step("Minifying output...");
-        source = minify(&source, assets::DARKLUA_CONFIG)?;
+        let config = if args.compat {
+            assets::DARKLUA_PROD_COMPAT
+        } else {
+            assets::DARKLUA_PROD
+        };
+        final_source = minify(&final_source, config)?;
+    } else {
+        logger.step("Finalizing output...");
     }
 
     logger.step("Writing to disk...");
@@ -76,7 +98,7 @@ pub fn bundle(args: Args) -> Result<()> {
         fs::create_dir_all(parent).context("Failed to create output directory")?;
     }
 
-    fs::write(&args.output, source).context("Failed to write output file")?;
+    fs::write(&args.output, final_source).context("Failed to write output file")?;
     logger.finish(&format!("Bundle generated at {}", args.output.display()));
 
     Ok(())
@@ -97,7 +119,7 @@ impl<'a> Bundler<'a> {
         }
     }
 
-    pub fn build(mut self, header_override: Option<String>) -> Result<String> {
+    pub fn build(mut self, header_override: Option<String>, darklua_config: Option<&str>) -> Result<String> {
         let header_raw = header_override.as_deref().unwrap_or(assets::FILE_HEADER);
         let header = self.ctx.apply_templates(header_raw);
         writeln!(self.output_buffer, "{}\n", header)?;
@@ -124,6 +146,7 @@ impl<'a> Bundler<'a> {
             main_ref,
             &main_instance.name,
             "nil",
+            darklua_config,
         )?;
 
         writeln!(self.output_buffer, "__start()")?;

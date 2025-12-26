@@ -4,6 +4,7 @@ use rbx_dom_weak::{types::Variant, Instance};
 use crate::cli::Mode;
 
 use super::escape::append_luau_string;
+use super::minify::minify;
 
 /// Writes a non-script instance registration.
 pub(crate) fn write_instance(
@@ -33,17 +34,23 @@ pub(crate) fn write_script(
     full_path_quoted: &str,
     parent_path_quoted: &str,
     mode: Mode,
+    darklua_config: Option<&str>,
 ) -> Result<()> {
-    let source_code = instance
+    let mut source_code = instance
         .properties
         .iter()
         .find(|(k, _)| k.as_str() == "Source")
         .map(|(_, v)| match v {
-            Variant::String(s) => s.as_str(),
-            Variant::BinaryString(b) => std::str::from_utf8(b.as_ref()).unwrap_or(""),
-            _ => "",
+            Variant::String(s) => s.to_string(),
+            Variant::BinaryString(b) => String::from_utf8_lossy(b.as_ref()).to_string(),
+            _ => String::new(),
         })
-        .unwrap_or("");
+        .unwrap_or_default();
+
+    // Apply darklua transformations in development mode before stringification
+    if let Some(config) = darklua_config {
+        source_code = minify(&source_code, config)?;
+    }
 
     output.push_str("__lua(");
     append_luau_string(&instance.name, output);
@@ -59,7 +66,7 @@ pub(crate) fn write_script(
         output.push_str("\tlocal _=__env(");
         output.push_str(full_path_quoted);
         output.push_str(")\n\tlocal script,require=_.script,_.require\n\t");
-        output.push_str(source_code);
+        output.push_str(&source_code);
         output.push('\n');
     } else {
         let wrapped_code = format!(

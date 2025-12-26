@@ -14,6 +14,7 @@ pub(crate) fn process_instance(
     referent: rbx_dom_weak::types::Ref,
     full_path: &str,
     parent_path_quoted: &str,
+    darklua_config: Option<&str>,
 ) -> Result<()> {
     let instance = dom
         .get_by_ref(referent)
@@ -29,6 +30,7 @@ pub(crate) fn process_instance(
             &current_path_quoted,
             parent_path_quoted,
             mode,
+            darklua_config,
         )?,
         _ => write_instance(
             output,
@@ -52,6 +54,7 @@ pub(crate) fn process_instance(
             *child_ref,
             &child_path,
             &current_path_quoted,
+            darklua_config,
         )?;
     }
 
