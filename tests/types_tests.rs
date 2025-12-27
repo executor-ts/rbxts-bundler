@@ -1,85 +1,75 @@
-//! Tests for the BundlerContext type.
+//! Tests for `BundlerContext`.
 
 use rbxts_bundler::bundler::types::BundlerContext;
-use rbxts_bundler::cli::Mode;
+use rbxts_bundler::bundler::Mode;
 use std::path::Path;
 
-#[test]
-fn test_context_new_development() {
-    let path = Path::new("/test/input.rbxm");
-    let ctx = BundlerContext::new(Mode::Development, path);
-    assert_eq!(ctx.mode, Mode::Development);
-    assert_eq!(ctx.input_path, path);
+fn ctx(path: &str) -> BundlerContext<'_> {
+    BundlerContext::new(Mode::Development, Path::new(path))
 }
 
-#[test]
-fn test_context_new_production() {
-    let path = Path::new("/test/input.rbxm");
-    let ctx = BundlerContext::new(Mode::Production, path);
-    assert_eq!(ctx.mode, Mode::Production);
-    assert_eq!(ctx.input_path, path);
+mod creation {
+    use super::*;
+
+    #[test]
+    fn stores_mode_and_path() {
+        let path = Path::new("/test/input.rbxm");
+
+        let dev = BundlerContext::new(Mode::Development, path);
+        assert_eq!(dev.mode, Mode::Development);
+        assert_eq!(dev.input_path, path);
+
+        let prod = BundlerContext::new(Mode::Production, path);
+        assert_eq!(prod.mode, Mode::Production);
+        assert_eq!(prod.input_path, path);
+    }
 }
 
-#[test]
-fn test_apply_templates_name() {
-    let path = Path::new("/test/input.rbxm");
-    let ctx = BundlerContext::new(Mode::Development, path);
-    let result = ctx.apply_templates("Built with {{NAME}}");
-    assert!(result.contains("rbxts-bundler"));
-    assert!(!result.contains("{{NAME}}"));
-}
+mod templates {
+    use super::*;
 
-#[test]
-fn test_apply_templates_version() {
-    let path = Path::new("/test/input.rbxm");
-    let ctx = BundlerContext::new(Mode::Development, path);
-    let result = ctx.apply_templates("Version: {{VERSION}}");
-    // Version should be replaced with actual version
-    assert!(!result.contains("{{VERSION}}"));
-    // Should contain some version pattern (digits and dots)
-    assert!(result.chars().any(|c| c.is_ascii_digit()));
-}
+    #[test]
+    fn replaces_name() {
+        let result = ctx("/test/input.rbxm").apply_templates("{{NAME}}");
+        assert!(result.contains("rbxts-bundler"));
+        assert!(!result.contains("{{NAME}}"));
+    }
 
-#[test]
-fn test_apply_templates_input() {
-    let path = Path::new("/my/project/input.rbxm");
-    let ctx = BundlerContext::new(Mode::Development, path);
-    let result = ctx.apply_templates("Source: {{INPUT}}");
-    assert!(result.contains("input.rbxm"));
-    assert!(!result.contains("{{INPUT}}"));
-}
+    #[test]
+    fn replaces_version() {
+        let result = ctx("/test/input.rbxm").apply_templates("{{VERSION}}");
+        assert!(!result.contains("{{VERSION}}"));
+        assert!(result.chars().any(|c| c.is_ascii_digit()));
+    }
 
-#[test]
-fn test_apply_templates_all_placeholders() {
-    let path = Path::new("/test/file.rbxm");
-    let ctx = BundlerContext::new(Mode::Production, path);
-    let template = "-- {{NAME}} v{{VERSION}}\n-- Source: {{INPUT}}";
-    let result = ctx.apply_templates(template);
+    #[test]
+    fn replaces_input() {
+        let result = ctx("/my/project/input.rbxm").apply_templates("{{INPUT}}");
+        assert!(result.contains("input.rbxm"));
+        assert!(!result.contains("{{INPUT}}"));
+    }
 
-    assert!(!result.contains("{{NAME}}"));
-    assert!(!result.contains("{{VERSION}}"));
-    assert!(!result.contains("{{INPUT}}"));
-    assert!(result.contains("rbxts-bundler"));
-    assert!(result.contains("file.rbxm"));
-}
+    #[test]
+    fn replaces_all_placeholders() {
+        let ctx = BundlerContext::new(Mode::Production, Path::new("/test/file.rbxm"));
+        let result = ctx.apply_templates("{{NAME}} v{{VERSION}} - {{INPUT}}");
 
-#[test]
-fn test_apply_templates_no_placeholders() {
-    let path = Path::new("/test/input.rbxm");
-    let ctx = BundlerContext::new(Mode::Development, path);
-    let content = "This has no placeholders";
-    let result = ctx.apply_templates(content);
-    assert_eq!(result, content);
-}
+        assert!(!result.contains("{{"));
+        assert!(result.contains("rbxts-bundler"));
+        assert!(result.contains("file.rbxm"));
+    }
 
-#[test]
-fn test_apply_templates_repeated_placeholders() {
-    let path = Path::new("/test/input.rbxm");
-    let ctx = BundlerContext::new(Mode::Development, path);
-    let template = "{{NAME}} - {{NAME}} - {{NAME}}";
-    let result = ctx.apply_templates(template);
+    #[test]
+    fn preserves_text_without_placeholders() {
+        let content = "no placeholders here";
+        assert_eq!(ctx("/test/input.rbxm").apply_templates(content), content);
+    }
 
-    // All occurrences should be replaced
-    assert!(!result.contains("{{NAME}}"));
-    assert_eq!(result.matches("rbxts-bundler").count(), 3);
+    #[test]
+    fn replaces_repeated_placeholders() {
+        let result = ctx("/test/input.rbxm").apply_templates("{{NAME}} {{NAME}} {{NAME}}");
+
+        assert!(!result.contains("{{NAME}}"));
+        assert_eq!(result.matches("rbxts-bundler").count(), 3);
+    }
 }

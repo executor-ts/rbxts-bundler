@@ -1,1 +1,4 @@
 /target
+/dist
+/tests/output/*
+!/tests/output/.gitkeep

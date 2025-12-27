@@ -1,9 +1,32 @@
 //! Command-line interface definitions.
 
-use std::fmt;
+use std::fs;
 use std::path::PathBuf;
 
-use clap::{Parser, Subcommand};
+use anyhow::{Context, Result};
+use clap::{Parser, Subcommand, ValueEnum};
+
+use crate::bundler::{BuildConfig, Target};
+
+/// CLI-specific target enum that maps to bundler::Target
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+pub enum CliTarget {
+    Dev,
+    DevCompat,
+    Rel,
+    RelCompat,
+}
+
+impl From<CliTarget> for Target {
+    fn from(value: CliTarget) -> Self {
+        match value {
+            CliTarget::Dev => Self::Dev,
+            CliTarget::DevCompat => Self::DevCompat,
+            CliTarget::Rel => Self::Rel,
+            CliTarget::RelCompat => Self::RelCompat,
+        }
+    }
+}
 
 #[derive(Parser, Debug)]
 #[command(
@@ -11,63 +34,87 @@ use clap::{Parser, Subcommand};
     version,
     about,
     disable_help_subcommand = true,
-    subcommand_required = false,
-    arg_required_else_help = true
+    subcommand_required = true,
 )]
 pub struct Cli {
-    /// Bundle the input model into a single Luau file
-    #[command(flatten)]
-    pub bundle: Args,
-
     /// Available subcommands
     #[command(subcommand)]
-    pub command: Option<Commands>,
+    pub command: Commands,
 }
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum Commands {
-    /// Bundle the input model into a single Luau file
-    Bundle(Args),
+    /// Build one or more targets into the output directory
+    Build(BuildArgs),
+}
+
+/// Verbosity level for CLI output.
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+pub enum Verbosity {
+    /// Suppress all output including errors
+    Silent,
+    /// Suppress progress/info, show only errors
+    Quiet,
+    /// Normal output (default)
+    #[default]
+    Normal,
 }
 
 #[derive(clap::Args, Debug, Clone)]
-pub struct Args {
+pub struct BuildArgs {
     /// Path to the input model file (.rbxm)
-    #[arg(short = 'i', long)]
     pub input: PathBuf,
 
-    /// Path to the output file (.lua)
-    #[arg(short = 'o', long)]
-    pub output: PathBuf,
+    /// One or more build targets
+    #[arg(short = 't', long = "target", value_enum, default_values_t = [CliTarget::Dev])]
+    pub targets: Vec<CliTarget>,
 
-    /// Enable release mode (minification, optimization)
-    #[arg(short = 'r', long, default_value_t = false)]
-    pub release: bool,
-
-    /// Enable compatibility mode (remove modern Luau features)
-    #[arg(short = 'c', long, default_value_t = false)]
-    pub compat: bool,
+    /// Output directory for generated bundles
+    #[arg(short = 'o', long = "out-dir")]
+    pub out_dir: PathBuf,
 
     /// Path to a custom header file
     #[arg(long)]
     pub header: Option<PathBuf>,
 
-    /// Suppress standard output
-    #[arg(short = 's', long, default_value_t = false)]
+    /// Suppress progress output, show only errors
+    #[arg(short = 'q', long = "quiet", conflicts_with = "silent")]
+    pub quiet: bool,
+
+    /// Suppress all output including errors
+    #[arg(short = 's', long = "silent", conflicts_with = "quiet")]
     pub silent: bool,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub enum Mode {
-    Development,
-    Production,
-}
-
-impl fmt::Display for Mode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Mode::Development => write!(f, "DEBUG"),
-            Mode::Production => write!(f, "RELEASE"),
+impl BuildArgs {
+    /// Get the verbosity level from CLI flags.
+    pub fn verbosity(&self) -> Verbosity {
+        if self.silent {
+            Verbosity::Silent
+        } else if self.quiet {
+            Verbosity::Quiet
+        } else {
+            Verbosity::Normal
         }
+    }
+
+    /// Convert CLI arguments to a BuildConfig for the bundler library.
+    pub fn to_build_config(&self) -> Result<BuildConfig> {
+        let header_content = self
+            .header
+            .as_ref()
+            .map(|p| fs::read_to_string(p).context("Failed to read header file"))
+            .transpose()?;
+
+        let targets = self.targets.iter().copied().map(Target::from).collect();
+
+        let mut config = BuildConfig::new(self.input.clone(), self.out_dir.clone())
+            .with_targets(targets);
+
+        if let Some(header) = header_content {
+            config = config.with_header(header);
+        }
+
+        Ok(config)
     }
 }

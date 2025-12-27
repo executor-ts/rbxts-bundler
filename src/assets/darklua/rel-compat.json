@@ -31,9 +31,7 @@
         "remove_nil_declaration",
         "remove_empty_do",
 
-        "remove_unused_variable",
         "group_local_assignment",
-
         {
             "rule": "rename_variables",
             "include_functions": true

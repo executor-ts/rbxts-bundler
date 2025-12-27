@@ -1,44 +1,34 @@
-//! Tests for the minification functionality.
+//! Tests for Lua minification.
 
+use rbxts_bundler::assets::DARKLUA_REL;
 use rbxts_bundler::bundler::minify::minify;
-use rbxts_bundler::assets::DARKLUA_PROD;
 
-#[test]
-fn test_minify_simple() {
-    let source = r#"
+mod success {
+    use super::*;
+
+    #[test]
+    fn simple_function() {
+        let source = r#"
 local function hello()
     print("Hello, World!")
 end
-
 return hello
 "#;
+        let result = minify(source, DARKLUA_REL);
+        assert!(result.is_ok());
+        assert!(!result.unwrap().is_empty());
+    }
 
-    let result = minify(source, DARKLUA_PROD);
-    assert!(result.is_ok());
+    #[test]
+    fn preserves_return() {
+        let source = "local x = 1\nlocal y = 2\nlocal z = x + y\nreturn z";
+        let result = minify(source, DARKLUA_REL).unwrap();
+        assert!(result.contains("return"));
+    }
 
-    let minified = result.unwrap();
-    // Minified code should be shorter or equal in length (no unnecessary whitespace)
-    assert!(!minified.is_empty());
-}
-
-#[test]
-fn test_minify_preserves_functionality() {
-    let source = r#"local x = 1
-local y = 2
-local z = x + y
-return z"#;
-
-    let result = minify(source, DARKLUA_PROD);
-    assert!(result.is_ok());
-
-    let minified = result.unwrap();
-    // Should still have return statement
-    assert!(minified.contains("return"));
-}
-
-#[test]
-fn test_minify_with_comments() {
-    let source = r#"
+    #[test]
+    fn handles_comments() {
+        let source = r#"
 -- This is a comment
 local function test()
     -- Another comment
@@ -46,59 +36,47 @@ local function test()
 end
 return test
 "#;
+        assert!(minify(source, DARKLUA_REL).is_ok());
+    }
 
-    let result = minify(source, DARKLUA_PROD);
-    assert!(result.is_ok());
-}
-
-#[test]
-fn test_minify_invalid_config() {
-    let source = "local x = 1";
-    let invalid_config = "{ invalid json }";
-
-    let result = minify(source, invalid_config);
-    assert!(result.is_err());
-}
-
-#[test]
-fn test_minify_multiline_string() {
-    let source = r#"
+    #[test]
+    fn handles_multiline_strings() {
+        let source = r#"
 local str = [[
 This is a
 multiline string
 ]]
 return str
 "#;
+        assert!(minify(source, DARKLUA_REL).is_ok());
+    }
 
-    let result = minify(source, DARKLUA_PROD);
-    assert!(result.is_ok());
-}
+    #[test]
+    fn handles_empty_function() {
+        let source = "local function empty() end\nreturn empty";
+        assert!(minify(source, DARKLUA_REL).is_ok());
+    }
 
-#[test]
-fn test_minify_empty_function() {
-    let source = r#"
-local function empty()
-end
-return empty
-"#;
-
-    let result = minify(source, DARKLUA_PROD);
-    assert!(result.is_ok());
-}
-
-#[test]
-fn test_minify_table_constructor() {
-    let source = r#"
+    #[test]
+    fn handles_nested_tables() {
+        let source = r#"
 local t = {
     a = 1,
     b = 2,
-    c = {
-        nested = true
-    }
+    c = { nested = true }
 }
 return t
 "#;
+        assert!(minify(source, DARKLUA_REL).is_ok());
+    }
+}
 
-    let result = minify(source, DARKLUA_PROD);
-    assert!(result.is_ok());
+mod errors {
+    use super::*;
+
+    #[test]
+    fn invalid_config() {
+        let result = minify("local x = 1", "{ invalid json }");
+        assert!(result.is_err());
+    }
 }

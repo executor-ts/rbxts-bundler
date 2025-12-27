@@ -1,9 +1,8 @@
 use anyhow::Result;
 use rbx_dom_weak::{types::Variant, Instance};
 
-use crate::cli::Mode;
-
 use super::escape::append_luau_string;
+use super::types::Mode;
 use super::minify::minify;
 
 /// Writes a non-script instance registration.
@@ -42,7 +41,7 @@ pub(crate) fn write_script(
         .find(|(k, _)| k.as_str() == "Source")
         .map(|(_, v)| match v {
             Variant::String(s) => s.to_string(),
-            Variant::BinaryString(b) => String::from_utf8_lossy(b.as_ref()).to_string(),
+            Variant::BinaryString(b) => String::from_utf8_lossy(b.as_ref()).into_owned(),
             _ => String::new(),
         })
         .unwrap_or_default();
@@ -69,10 +68,13 @@ pub(crate) fn write_script(
         output.push_str(&source_code);
         output.push('\n');
     } else {
-        let wrapped_code = format!(
-            "local _=(...)( {} ) local script,require=_.script,_.require\n{}",
-            full_path_quoted, source_code
-        );
+        // Reserve capacity for the wrapped code to avoid reallocations
+        let mut wrapped_code = String::with_capacity(source_code.len() + full_path_quoted.len() + 64);
+        wrapped_code.push_str("local _=(...)( ");
+        wrapped_code.push_str(full_path_quoted);
+        wrapped_code.push_str(" ) local script,require=_.script,_.require\n");
+        wrapped_code.push_str(&source_code);
+        
         output.push_str("\treturn assert(loadstring(");
         append_luau_string(&wrapped_code, output);
         output.push_str(", ");

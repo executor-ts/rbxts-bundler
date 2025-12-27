@@ -18,9 +18,16 @@ pub fn minify(text: &str, config_content: &str) -> Result<String> {
     let options = Options::new(Path::new(temp_file)).with_configuration(config);
 
     match darklua_core::process(&resources, options) {
-        Ok(_) => resources
-            .get(temp_file)
-            .map_err(|e| anyhow!("Failed to retrieve minified content: {:?}", e)),
+        Ok(_) => {
+            let result = resources
+                .get(temp_file)
+                .map_err(|e| anyhow!("Failed to retrieve minified content: {:?}", e));
+            
+            // Clean up temp file to prevent memory accumulation
+            let _ = resources.remove(temp_file);
+            
+            result
+        }
         Err(e) => bail!("Darklua minification failed: {}", e),
     }
 }

@@ -1,9 +1,8 @@
 use anyhow::{Context, Result};
 use rbx_dom_weak::WeakDom;
 
-use crate::cli::Mode;
-
 use super::escape::to_luau_string;
+use super::types::Mode;
 use super::writer::{write_instance, write_script};
 
 /// Recursively processes an instance and its children, writing to the output buffer.
@@ -41,18 +40,26 @@ pub(crate) fn process_instance(
         )?,
     }
 
+    // Reuse a buffer for child paths to avoid per-child allocations
+    let mut child_path_buf = String::with_capacity(full_path.len() + 64);
+    
     for child_ref in instance.children() {
         let child = dom
             .get_by_ref(*child_ref)
             .context("Child reference missing")?;
 
-        let child_path = format!("{}.{}", full_path, child.name);
+        // Build child path by reusing buffer
+        child_path_buf.clear();
+        child_path_buf.push_str(full_path);
+        child_path_buf.push('.');
+        child_path_buf.push_str(&child.name);
+        
         process_instance(
             dom,
             output,
             mode,
             *child_ref,
-            &child_path,
+            &child_path_buf,
             &current_path_quoted,
             darklua_config,
         )?;

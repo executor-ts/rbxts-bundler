@@ -11,6 +11,8 @@ Designed primarily for `rbxts` users who need to run their projects in environme
 * **Circular Dependency Detection:** The runtime shim detects and reports circular dependencies between modules.
 * **Built-in Minification:** Integrated [Darklua](https://darklua.com/) support for release builds to minify and optimize output.
 * **Customizable:** Support for custom file headers and Darklua configurations.
+* **Parallel Builds:** Multi-target builds run in parallel for faster compilation.
+* **Library Support:** Can be used as a Rust library/crate in addition to CLI usage.
 
 ## Installation
 
@@ -21,7 +23,7 @@ Designed primarily for `rbxts` users who need to run their projects in environme
 ```toml
 # aftman.toml
 [tools]
-rbxts-bundler = "executor-ts/rbxts-bundler@0.1.0" # Replace with latest version
+rbxts-bundler = "executor-ts/rbxts-bundler@0.2.0" # Replace with latest version
 ```
 
 ### Rokit
@@ -36,56 +38,107 @@ rokit add executor-ts/rbxts-bundler
 cargo install --git https://github.com/executor-ts/rbxts-bundler
 ```
 
-## Usage
+### As a Library Dependency
+
+Add to your `Cargo.toml`:
+
+```toml
+[dependencies]
+rbxts-bundler = { git = "https://github.com/executor-ts/rbxts-bundler" }
+```
+
+## CLI Usage
 
 The basic usage requires an input model file (`.rbxm`) and an output destination (`.lua`).
 
 ```bash
-rbxts-bundler --input model.rbxm --output bundle.lua
+# Build development target (default)
+rbxts-bundler build model.rbxm -o dist
+
+# Build multiple targets
+rbxts-bundler build model.rbxm -t dev -t rel -t rel-compat -o dist
+
+# With custom header
+rbxts-bundler build model.rbxm -t rel -o dist --header ./license_header.txt
 ```
 
-### Release Build
+**Available targets:**
+- `dev` - Development (unminified, uses `loadstring`)
+- `dev-compat` - Development with compatibility mode
+- `rel` - Release (minified, optimized)
+- `rel-compat` - Release with compatibility mode
 
-To generate a production-ready bundle, use the `--release` (or `-r`) flag. This enables Darklua minification and optimization.
+**Note:** Compat targets make the generated Luau more likely to run in outdated environments and potentially even Lua 5.3 by avoiding newer language features and providing polyfills.
 
-```bash
-rbxts-bundler -i model.rbxm -o bundle.lua --release
+Output files are named `<input-stem>.<target>.lua` in the specified output directory.
+
+## Library Usage
+
+The bundler can be used programmatically as a Rust library:
+
+```rust
+use std::path::PathBuf;
+use rbxts_bundler::{build, BuildConfig, Target};
+
+fn main() -> anyhow::Result<()> {
+    // Create a build configuration
+    let config = BuildConfig::new(
+        PathBuf::from("input.rbxm"),
+        PathBuf::from("dist"),
+    )
+    .with_targets(vec![Target::Dev, Target::Rel]);
+
+    // Run the build
+    let result = build(&config)?;
+
+    // Check the results
+    if result.is_success() {
+        println!("Build completed in {:?}", result.duration);
+        for target_result in &result.target_results {
+            println!("  {} -> {}", target_result.target, target_result.output_file.display());
+        }
+    } else {
+        for target_result in &result.target_results {
+            if let Some(err) = &target_result.error_message {
+                eprintln!("Failed {}: {}", target_result.target, err);
+            }
+        }
+    }
+
+    Ok(())
+}
 ```
 
-### Custom Configuration
+### Library API
 
-You can provide a custom Darklua configuration file or a custom header (copyright/license comment) for the output file.
+The main types exposed by the library:
 
-```bash
-rbxts-bundler \
-  -i model.rbxm \
-  -o bundle.lua \
-  -r \
-  --darklua-config ./darklua.json \
-  --header ./license_header.txt
-```
+- **`BuildConfig`** - Configuration for a build operation
+- **`BuildResult`** - Result of a build operation with per-target results and duration
+- **`TargetResult`** - Individual target result with success status and error message
+- **`Target`** - Build target variants (`Dev`, `DevCompat`, `Rel`, `RelCompat`)
+- **`Mode`** - Build mode (`Development`, `Production`)
+- **`build(config)`** - Main entry point to run a build
 
 ## CLI Options
 
 | Flag | Short | Description |
 | --- | --- | --- |
-| `--input <PATH>` | `-i` | Path to the input model file (`.rbxm`). |
-| `--output <PATH>` | `-o` | Path to the output file (`.lua`). |
-| `--release` | `-r` | Enable release mode (minification, optimization). |
+| `build <INPUT>` |  | Path to the input model file (`.rbxm`). |
+| `--target <TARGET>` | `-t` | Build target(s): `dev`, `dev-compat`, `rel`, `rel-compat` (can be specified multiple times, default: `dev`). |
+| `--out-dir <DIR>` | `-o` | Output directory for generated bundles. |
 | `--header <PATH>` |  | Path to a custom header file to prepend to the output. |
-| `--darklua-config <PATH>` |  | Path to a custom Darklua configuration file. |
-| `--silent` | `-s` | Suppress standard output logs. |
+| `--quiet` | `-q` | Suppress progress output, show only errors. |
+| `--silent` | `-s` | Suppress all output including errors. |
 
 ## How it Works
 
 1. **Parsing:** The tool reads the binary Roblox model (`.rbxm`).
 2. **Virtualization:** It wraps every script in a closure and registers it into a virtual DOM table.
 3. **Shim Generation:** A lightweight runtime shim is prepended to the file. This shim handles:
-* Virtual instance creation.
-* `require()` logic (resolving modules within the virtual tree).
-* Thread-safe loading of modules.
-
-
+   * Virtual instance creation.
+   * `require()` logic (resolving modules within the virtual tree).
+   * Thread-safe loading of modules.
 4. **Minification:** If running in release mode, the final assembled Lua string is passed through `darklua` to reduce file size and obfuscate variable names.
 
 ## License

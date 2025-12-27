@@ -1,7 +1,12 @@
 [package]
 name = "rbxts-bundler"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
+description = "A Rust library and CLI for bundling Roblox Instance models (.rbxm) into single portable Luau scripts"
+license = "MIT"
+repository = "https://github.com/executor-ts/rbxts-bundler"
+keywords = ["roblox", "bundler", "luau", "rbxts"]
+categories = ["development-tools::build-utils", "command-line-utilities"]
 
 [lib]
 name = "rbxts_bundler"
@@ -20,7 +25,7 @@ indicatif = "0.18.3"
 rbx_binary = "2.0.1"
 rbx_dom_weak = "4.1.0"
 serde_json = "1.0.146"
-
+rayon = "1.10.0"
 
 [profile.release]
 strip = true
