@@ -137,6 +137,7 @@ jobs:
 
       - name: Extract changelog for this version
         id: changelog
+        shell: bash
         run: |
           # Extract version from tag (removes 'v' prefix)
           VERSION=${GITHUB_REF_NAME#v}
